@@ -37,14 +37,10 @@ public class CalendarPickerView extends ListView {
 	private final DateFormat fullDateFormat;
 	final List<MonthDescriptor> months = new ArrayList<MonthDescriptor>();
 	final List<List<List<MonthCellDescriptor>>> cells = new ArrayList<List<List<MonthCellDescriptor>>>();
-	private MonthCellDescriptor selectedCell;
-	//11.08
-	private List<MonthCellDescriptor> selectedCellList = new ArrayList<MonthCellDescriptor>();
 	
 	final Calendar today = Calendar.getInstance();
-	private final Calendar selectedCal = Calendar.getInstance();
-	//11.08
-	private final List<Calendar> selectedCalList = new ArrayList<Calendar>();
+	//车位共享日期列表
+	private List<Calendar> selectedCalList = null;
 	
 	private final Calendar minCal = Calendar.getInstance();
 	private final Calendar maxCal = Calendar.getInstance();
@@ -58,12 +54,12 @@ public class CalendarPickerView extends ListView {
 		setAdapter(adapter);
 		
 		//11.08
-		for(int i = 0; i < 7; i++) {
-			Calendar cal = Calendar.getInstance();
-			cal.set(2014, 11, 10 + i * 2);
-			setMidnight(cal);
-			selectedCalList.add(cal);
-		}
+//		for(int i = 0; i < 7; i++) {
+//			Calendar cal = Calendar.getInstance();
+//			cal.set(2014, 11, 10 + i * 2);
+//			setMidnight(cal);
+//			selectedCalList.add(cal);
+//		}
 		
 		final int bg = getResources().getColor(R.color.calendar_bg);
 		setBackgroundColor(bg);
@@ -89,8 +85,10 @@ public class CalendarPickerView extends ListView {
 	 * @param maxDate
 	 *            Latest selectable date, exclusive. Must be later than
 	 *            {@code minDate}.
+	 * @param selectedCalList
+	 * 			  The share days of one parking
 	 */
-	public void init(Date selectedDate, Date minDate, Date maxDate) {
+	public void init(Date selectedDate, Date minDate, Date maxDate, List<Calendar> selectedCalList) {
 		if (selectedDate == null || minDate == null || maxDate == null) {
 			throw new IllegalArgumentException("All dates must be non-null.  "
 					+ dbg(selectedDate, minDate, maxDate));
@@ -109,13 +107,12 @@ public class CalendarPickerView extends ListView {
 							+ dbg(selectedDate, minDate, maxDate));
 		}
 		// Clear previous state.
+		this.selectedCalList = selectedCalList;
 		cells.clear();
 		months.clear();
-		// Sanitize input: clear out the hours/minutes/seconds/millis.
-		//selectedCal.setTime(selectedDate);
 		minCal.setTime(minDate);
 		maxCal.setTime(maxDate);
-		//setMidnight(selectedCal);
+
 		setMidnight(minCal);
 		setMidnight(maxCal);
 		// maxDate is exclusive: bump back to the previous day so if maxDate is
@@ -127,9 +124,7 @@ public class CalendarPickerView extends ListView {
 		monthCounter.setTime(minCal.getTime());
 		final int maxMonth = maxCal.get(MONTH);
 		final int maxYear = maxCal.get(YEAR);
-//		final int selectedYear = selectedCal.get(YEAR);
-//		final int selectedMonth = selectedCal.get(MONTH);
-//		int selectedIndex = 0;
+
 		while ((monthCounter.get(MONTH) <= maxMonth // Up to, including the
 													// month.
 				|| monthCounter.get(YEAR) < maxYear) // Up to the year.
@@ -138,16 +133,10 @@ public class CalendarPickerView extends ListView {
 					monthCounter.get(YEAR), monthNameFormat.format(monthCounter.getTime()));
 			cells.add(getMonthCells(month, monthCounter, selectedCalList));
 			Logr.d("Adding month %s", month);
-//			if (selectedMonth == month.getMonth() && selectedYear == month.getYear()) {
-//				selectedIndex = months.size();
-//			}
 			months.add(month);
 			monthCounter.add(MONTH, 1);
 		}
 		adapter.notifyDataSetChanged();
-//		if (selectedIndex != 0) {
-//			scrollToSelectedMonth(selectedIndex);
-//		}
 	}
 	private void scrollToSelectedMonth(final int selectedIndex) {
 		post(new Runnable() {
@@ -163,13 +152,12 @@ public class CalendarPickerView extends ListView {
 		}
 		super.onMeasure(widthMeasureSpec, heightMeasureSpec);
 	}
-	public Date getSelectedDate() {
-		return selectedCal.getTime();
-	}
+	
 	/** Returns a string summarizing what the client sent us for init() params. */
 	private static String dbg(Date startDate, Date minDate, Date maxDate) {
 		return "startDate: " + startDate + "\nminDate: " + minDate + "\nmaxDate: " + maxDate;
 	}
+	
 	/** Clears out the hours/minutes/seconds/millis of a Calendar. */
 	private static void setMidnight(Calendar cal) {
 		cal.set(HOUR_OF_DAY, 0);
